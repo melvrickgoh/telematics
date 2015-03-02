@@ -1,9 +1,39 @@
 library(data.table)
 library(plotrix)
-library(data.table)
 library(parallel)
 library(caret)
 
+#iterate through all individual driver folders
+proc.all_drivers <- function(parent_directory = "."){
+  driver_dir_locales = list.files(parent_directory,,,TRUE)
+  
+  for (locale in driver_dir_locales){
+    proc.driver_trips(locale)
+  }
+}
+#iterate through all individual driver trips
+proc.driver_trips <- function(driver_directory = "."){
+  driver_no = basename(driver_directory)
+  driver_trip_files = list.files(driver_directory)
+  
+  names <- data.frame()
+  for (file in driver_trip_files) {
+    file_locale = p(driver_directory,"/",file) #file full location
+    
+    trip_file_name = basename(file_locale)
+    
+    trip_frame <- read.csv(file_locale, header=TRUE) 
+    
+    #perform measures
+    trip_feature_set <- tripFeatures(trip_frame,trip_file_name,1,names)
+    print(trip_feature_set)
+    
+    #name <- sub(".csv", "", file_locale) 
+    #cat("Read ", file_locale, "\trows: ", nrow(trip_frame), " cols: ", ncol(trip_frame),  "\n") 
+    #eval(paste(name, "<- trip_frame"))
+    
+  }
+}
 calcSpeed <- function(trip,nlag=NULL) {
   dx <- diff(trip$x,lag=nlag,differences=1)
   dy <- diff(trip$y,lag=nlag,differences=1)
@@ -25,8 +55,7 @@ generateDistribution <- function(x,name) {
   names(dist) = gsub("%", "_pcnt", names(dist))
   return(dist)
 }
-speedDistribution <- function(trip,nlag)
-{
+speedDistribution <- function(trip,nlag) {
   speed_fps = calcSpeed(trip,nlag)
   return(generateDistribution(speed_fps,'speed'))  
 }
@@ -124,7 +153,7 @@ distance <- function(trip,nlag=NULL)
   return(dist)
 }
 
-tripFeatures<-function(trip,target,nlag) {
+tripFeatures<-function(trip,target,nlag,names) {
   sd <- speedDistribution(trip,nlag)
   at <- TangAccelDistribution(trip,nlag)
   cd <- curvatureDistribution(trip,nlag)
@@ -132,9 +161,9 @@ tripFeatures<-function(trip,target,nlag) {
   atotal <- TotalAccelDistribution(trip,nlag)
   distance <- distance(trip,nlag)
   t <- target
-  names(t) <- 'target'
+  #names(t) <- 'target'
   tr <- unique(trip$drive)
-  names(tr) <- 'tripId'
+  #names(tr) <- 'tripId'
   rtn <- c(sd,at,an,atotal,cd,distance,t,tr)
   return(rtn)
 }

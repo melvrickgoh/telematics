@@ -6,7 +6,7 @@
 ###########################################################
 # Update this line with the R packages to install:
 
-my_packages = c("plyr","data.table","plotrix","parallel","caret")
+my_packages = c("plyr","data.table","plotrix","parallel","caret","hash")
 
 ###########################################################
 
