@@ -3,6 +3,35 @@ library(plotrix)
 library(parallel)
 library(caret)
 
+retrieve.driver_trip_distributions <- function(directory_locale,calc_type){
+  trip_frame <- read.csv(file_locale, header=TRUE)
+  
+  switch(calc_type,"speed_dist"={
+    return(speedDistribution(trip_frame,1))
+  },"tangent_a_dist"={
+    return(TangAccelDistribution(trip_frame,1))
+  },"normal_a_dist"={
+    return(NormAccelDistribution(trip_frame,1))
+  },"total_a_dist"={
+    return(TotalAccelDistribution(trip_frame,1))
+  })
+}
+
+retrieve.driver_trip_raw_calculation <- function(directory_locale,calc_type){
+  trip_frame <- read.csv(file_locale, header=TRUE)
+  
+  switch(calc_type,"distance"={
+    return(distance(trip_frame,1))
+  },"speed"={
+    return(calcSpeed(trip_frame,1))
+  },"tangent_acceleration"={
+    return(calcTangAccel(trip_frame,1))
+  },"normal_acceleration"={
+    return(calcNormAccel(trip_frame,1))
+  },"curvature"={
+    return(calcCurvature(trip_frame,1))
+  })
+}
 #iterate through all individual driver folders
 proc.all_drivers <- function(parent_directory = "."){
   driver_dir_locales = list.files(parent_directory,,,TRUE)
@@ -25,8 +54,8 @@ proc.driver_trips <- function(driver_directory = "."){
     trip_frame <- read.csv(file_locale, header=TRUE) 
     
     #perform measures
-    trip_feature_set <- tripFeatures(trip_frame,trip_file_name,1,names)
-    print(trip_feature_set)
+    trip_feature_set <- tripFeatures(trip_frame,trip_file_name,1)
+    #print(trip_feature_set)
     
     #name <- sub(".csv", "", file_locale) 
     #cat("Read ", file_locale, "\trows: ", nrow(trip_frame), " cols: ", ncol(trip_frame),  "\n") 
@@ -57,6 +86,8 @@ generateDistribution <- function(x,name) {
 }
 speedDistribution <- function(trip,nlag) {
   speed_fps = calcSpeed(trip,nlag)
+  print(speed_fps)
+  print(mean(speed_fps[0]))
   return(generateDistribution(speed_fps,'speed'))  
 }
 calcTangAccel <- function(trip,nlag=NULL) {
