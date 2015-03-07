@@ -45,7 +45,7 @@ proc.all_drivers <- function(parent_directory = "."){
 proc.driver_trips <- function(driver_directory = "."){
   driver_no = basename(driver_directory)
   driver_trip_files = list.files(driver_directory)
-  
+  print(driver_trip_files)
   names <- data.frame()
   for (file in driver_trip_files) {
     file_locale = p(driver_directory,"/",file) #file full location
@@ -53,22 +53,36 @@ proc.driver_trips <- function(driver_directory = "."){
     trip_file_name = basename(file_locale)
     
     trip_frame <- read.csv(file_locale, header=TRUE) 
-    
-    #perform measures
-    trip_feature_set <- tripFeatures(driver_no,trip_frame,trip_file_name,1)
-    
-    trip_summary_stats_frame <- data.frame(as.list(trip_feature_set))
-    test_frame <- data.frame(lapply(trip_feature_set, type.convert), stringsAsFactors=FALSE)
-    
-    write.table(trip_summary_stats_frame, file = 'summary_stats.csv', append=TRUE, sep=",", row.names=FALSE,col.names=FALSE)
-    
-    #name <- sub(".csv", "", file_locale) 
-    #cat("Read ", file_locale, "\trows: ", nrow(trip_frame), " cols: ", ncol(trip_frame),  "\n") 
-    #eval(paste(name, "<- trip_frame"))
-    
+    if(toofast(trip_frame,1)){
+      print("Too fast");
+      print(file)
+      # print(toofast(trip_frame,1))  
+      # v<-FALSE
+    } else {
+      #perform measures
+      trip_feature_set <- tripFeatures(driver_no,trip_frame,trip_file_name,1)
+      
+      trip_summary_stats_frame <- data.frame(as.list(trip_feature_set))
+      test_frame <- data.frame(lapply(trip_feature_set, type.convert), stringsAsFactors=FALSE)
+      
+      write.table(trip_summary_stats_frame, file = 'summary_stats.csv', append=TRUE, sep=",", row.names=FALSE,col.names=FALSE)
+      
+      #name <- sub(".csv", "", file_locale) 
+      #cat("Read ", file_locale, "\trows: ", nrow(trip_frame), " cols: ", ncol(trip_frame),  "\n") 
+      #eval(paste(name, "<- trip_frame"))
+    }
   }
   print(p(driver_no," done"))
 }
+
+toofast <- function(trip,nlag=NULL) {
+  dx <- diff(trip$x,lag=nlag,differences=1)
+  dy <- diff(trip$y,lag=nlag,differences=1)
+  speed = sqrt(dx^2 + dy^2)/nlag
+  acceleration = diff(speed,1)
+  return(any(acceleration>200))
+}
+
 calcSpeed <- function(trip,nlag=NULL) {
   dx <- diff(trip$x,lag=nlag,differences=1)
   dy <- diff(trip$y,lag=nlag,differences=1)
