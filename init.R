@@ -7,6 +7,8 @@ parent_directory = dirname(current_directory)
 drivers_directory = p(parent_directory,"/drivers") #see helpers.R for concat of strings
 
 #for parsing through all drivers data
-#proc.all_drivers(drivers_directory)
+#Uncomment to run all drivers
+proc.all_drivers(drivers_directory)
 
-proc.driver_trips("C:/Users/Melvrick/Desktop/Data Mining/drivers/1003")
+#Uncomment to do a specific driver
+#proc.driver_trips("C:/Users/Melvrick/Desktop/Data Mining/drivers/1003")

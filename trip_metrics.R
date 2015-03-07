@@ -2,6 +2,7 @@ library(data.table)
 library(plotrix)
 library(parallel)
 library(caret)
+library(tools)
 
 retrieve.driver_trip_distributions <- function(directory_locale,calc_type){
   trip_frame <- read.csv(file_locale, header=TRUE)
@@ -54,14 +55,19 @@ proc.driver_trips <- function(driver_directory = "."){
     trip_frame <- read.csv(file_locale, header=TRUE) 
     
     #perform measures
-    trip_feature_set <- tripFeatures(trip_frame,trip_file_name,1)
-    #print(trip_feature_set)
+    trip_feature_set <- tripFeatures(driver_no,trip_frame,trip_file_name,1)
+    
+    trip_summary_stats_frame <- data.frame(as.list(trip_feature_set))
+    test_frame <- data.frame(lapply(trip_feature_set, type.convert), stringsAsFactors=FALSE)
+    
+    write.table(trip_summary_stats_frame, file = 'summary_stats.csv', append=TRUE, sep=",", row.names=FALSE,col.names=FALSE)
     
     #name <- sub(".csv", "", file_locale) 
     #cat("Read ", file_locale, "\trows: ", nrow(trip_frame), " cols: ", ncol(trip_frame),  "\n") 
     #eval(paste(name, "<- trip_frame"))
     
   }
+  print(p(driver_no," done"))
 }
 calcSpeed <- function(trip,nlag=NULL) {
   dx <- diff(trip$x,lag=nlag,differences=1)
@@ -69,6 +75,17 @@ calcSpeed <- function(trip,nlag=NULL) {
   speed = sqrt(dx^2 + dy^2)/nlag
   rtn = c(rep(NA,nlag),speed)
   return(rtn)
+}
+calcSpeedAttrs <- function(trip,nlag=NULL,speedVector){
+  dx <- diff(trip$x,lag=nlag,differences=1)
+  dy <- diff(trip$y,lag=nlag,differences=1)
+  speed = sqrt(dx^2 + dy^2)/nlag
+  speedVector["speed_mean"] = mean(speed)
+  speedVector["speed_min"] = min(speed)
+  speedVector["speed_max"] = max(speed)
+  speedVector["speed_variance"] = var(speed)
+  speedVector["speed_std"]= sd(speed)
+  return(speedVector)
 }
 generateDistribution <- function(x,name) {
   x_wo_na <- x[!is.na(x)]
@@ -86,8 +103,6 @@ generateDistribution <- function(x,name) {
 }
 speedDistribution <- function(trip,nlag) {
   speed_fps = calcSpeed(trip,nlag)
-  print(speed_fps)
-  print(mean(speed_fps[0]))
   return(generateDistribution(speed_fps,'speed'))  
 }
 calcTangAccel <- function(trip,nlag=NULL) {
@@ -102,6 +117,20 @@ TangAccelDistribution <- function(trip,nlag)
   accel_fps2 = calcTangAccel(trip,nlag)
   return(generateDistribution(accel_fps2,'tang_accel'))  
 }
+calcTangAccelAttrs <- function(trip,nlag,tangAccelVector){
+  dx2 <- diff(trip$x,lag=nlag,differences=2)
+  dy2 <- diff(trip$y,lag=nlag,differences=2)
+  accel_fps2 = 3.28084*sqrt(dx2^2 + dy2^2)/nlag
+  #accel_fps2 = c(rep(NA,2*nlag),accel_fps2)
+  
+  tangAccelVector["tang_accel_mean"] = mean(accel_fps2)
+  tangAccelVector["tang_accel_min"] = min(accel_fps2)
+  tangAccelVector["tang_accel_max"] = max(accel_fps2)
+  tangAccelVector["tang_accel_variance"] = var(accel_fps2)
+  tangAccelVector["tang_accel_std"]= sd(accel_fps2)
+  
+  return(tangAccelVector)
+}
 calcNormAccel <- function(trip,nlag) {
   sp <- calcSpeed(trip,nlag)
   cur <- calcCurvature(trip,nlag)
@@ -112,6 +141,19 @@ NormAccelDistribution <- function(trip,nlag)
 {
   accel_fps2 = calcNormAccel(trip,nlag)
   return(generateDistribution(accel_fps2,'norm_accel'))  
+}
+calcNormAccelAttrs <- function(trip,nlag,normalAccelVector){
+  sp <- calcSpeed(trip,nlag)
+  cur <- calcCurvature(trip,nlag)
+  accel_fps2 = sp / cur$radius
+  
+  normalAccelVector["norm_accel_mean"] = mean(accel_fps2)
+  normalAccelVector["norm_accel_min"] = min(accel_fps2)
+  normalAccelVector["norm_accel_max"] = max(accel_fps2)
+  normalAccelVector["norm_accel_variance"] = var(accel_fps2)
+  normalAccelVector["norm_accel_std"] = sd(accel_fps2)
+
+  return(normalAccelVector)
 }
 TotalAccelDistribution <- function(trip,nlag)
 {
@@ -173,6 +215,19 @@ curvatureDistribution <- function(trip,nlag)
   )
   return(rtn)  
 }
+calcCurvatureAttrs <- function(trip,nlag,curvatureVector){
+  cur = calcCurvature(trip,nlag)
+  radius = cur$radius
+  values <- radius[is.finite(radius)]
+  
+  curvatureVector["cur_mean"] = mean(values)
+  curvatureVector["cur_min"] = min(values)
+  curvatureVector["cur_max"] = max(values)
+  curvatureVector["cur_variance"] = var(values)
+  curvatureVector["cur_std"] = sd(values)
+  
+  return(curvatureVector)
+}
 distance <- function(trip,nlag=NULL)
 {
   # kt = (d2y/dt2) / (1+(dy/dt)^2)^(3/2)
@@ -181,21 +236,44 @@ distance <- function(trip,nlag=NULL)
   delta_dist <- sqrt(dx^2 + dy^2)
   dist = sum(delta_dist)
   names(dist) = paste('distance')
+
   return(dist)
 }
+distanceAttrs <- function(trip,nlag,distanceVector){
+  dx <- diff(trip$x,lag=nlag,differences=1)
+  dy <- diff(trip$y,lag=nlag,differences=1)
+  delta_dist <- sqrt(dx^2 + dy^2)
+  
+  distanceVector["distance_mean"] = mean(delta_dist)
+  distanceVector["distance_min"] = min(delta_dist)
+  distanceVector["distance_max"] = max(delta_dist)
+  distanceVector["distance_variance"] = var(delta_dist)
+  distanceVector["distance_std"] = sd(delta_dist)
+  
+  return(distanceVector)
+}
 
-tripFeatures<-function(trip,target,nlag,names) {
+tripFeatures<-function(driver_no,trip,target,nlag,names) {
   sd <- speedDistribution(trip,nlag)
+  sAttrs <- calcSpeedAttrs(trip,nlag,sd)
   at <- TangAccelDistribution(trip,nlag)
+  aAttrs <- calcTangAccelAttrs(trip,nlag,at)
   cd <- curvatureDistribution(trip,nlag)
+  cAttrs <- calcCurvatureAttrs(trip,nlag,cd)
   an <- NormAccelDistribution(trip,nlag)
+  #anAttrs <- calcNormAccelAttrs(trip,nlag,an)
   atotal <- TotalAccelDistribution(trip,nlag)
   distance <- distance(trip,nlag)
-  t <- target
+  distAttrs <- distanceAttrs(trip,nlag,distance)
+  
+  distAttrs["driver_no"] = driver_no
+  distAttrs["trip_no"] = file_path_sans_ext(target)
+  distAttrs["trip_file"] = target
+  
   #names(t) <- 'target'
   tr <- unique(trip$drive)
   #names(tr) <- 'tripId'
-  rtn <- c(sd,at,an,atotal,cd,distance,t,tr)
+  rtn <- c(sAttrs,aAttrs,an,atotal,cAttrs,distAttrs,tr)
   return(rtn)
 }
 tripsFeatures<-function(trips,target,driver,nlag) {
