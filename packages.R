@@ -6,7 +6,7 @@
 ###########################################################
 # Update this line with the R packages to install:
 
-my_packages = c("plyr","data.table","plotrix","parallel","caret","hash")
+my_packages = c("plyr","data.table","plotrix","parallel","caret","hash","stringr","gbm","dplyr")
 
 remove_packages = c("dplyr")
 
@@ -31,4 +31,4 @@ remove_if_avail = function(p) {
 }
 
 invisible(sapply(my_packages, install_if_missing))
-invisible(sapply(remove_packages, remove_if_avail))
+#invisible(sapply(remove_packages, remove_if_avail))

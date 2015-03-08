@@ -1,3 +1,10 @@
+library(stringr)
+library(data.table)
+library(plotrix)
+library(parallel)
+library(caret)
+library(tools)
+
 retrieve.driver_trip_distributions <- function(directory_locale,calc_type){
   trip_frame <- read.csv(file_locale, header=TRUE)
   
@@ -38,9 +45,9 @@ proc.all_drivers <- function(parent_directory = "."){
 
 proc.selective_driver_trips <- function(parent_directory = ".",target_file_name){
   target_frames = list.read_selective_folders(target_file_name)
-  for (targets in target_frames) {
-    target_locale = p(parent_directory,"/",folder_name)
-    print(target_locale)
+  for (folder_name in target_frames) {
+    folder_locale <- paste(parent_directory,'/',folder_name,sep="")
+    proc.driver_trips(folder_locale)
   }
 }
 
@@ -54,22 +61,24 @@ proc.all_driver_folder_names <- function(parent_directory = "."){
 
 #iterate through all individual driver trips
 proc.driver_trips <- function(driver_directory = "."){
+
   driver_no = basename(driver_directory)
   driver_trip_files = list.files(driver_directory)
-  print(driver_trip_files)
+
   names <- data.frame()
   for (file in driver_trip_files) {
-    file_locale = p(driver_directory,"/",file) #file full location
+    selective_file_locale = paste(driver_directory,"/",file,sep="") #file full location
+    print(selective_file_locale)
+    trip_file_name = basename(selective_file_locale)
     
-    trip_file_name = basename(file_locale)
-    
-    trip_frame <- read.csv(file_locale, header=TRUE) 
-    if(toofast(trip_frame,1)){
-      print("Too fast");
-      print(file)
+    trip_frame <- read.csv(selective_file_locale, header=TRUE) 
+    paste(trip_frame)
+    #if(toofast(trip_frame,1)){
+      #print("Too fast");
+      #print(file)
       # print(toofast(trip_frame,1))  
       # v<-FALSE
-    } else {
+    #} else {
       #perform measures
       trip_feature_set <- tripFeatures(driver_no,trip_frame,trip_file_name,1)
       
@@ -81,7 +90,7 @@ proc.driver_trips <- function(driver_directory = "."){
       #name <- sub(".csv", "", file_locale) 
       #cat("Read ", file_locale, "\trows: ", nrow(trip_frame), " cols: ", ncol(trip_frame),  "\n") 
       #eval(paste(name, "<- trip_frame"))
-    }
+    #}
   }
   print(p(driver_no," done"))
 }
