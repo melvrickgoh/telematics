@@ -18,3 +18,6 @@ list.dirs <- function(path=".", pattern=NULL, all.dirs=FALSE,
   else
     return(basename(dirs))
 }
+list.read_selective_folders<- function(file_locale){
+  return(read.table(file_locale, header = FALSE, sep = ""))
+}

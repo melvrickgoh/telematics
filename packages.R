@@ -8,6 +8,8 @@
 
 my_packages = c("plyr","data.table","plotrix","parallel","caret","hash")
 
+remove_packages = c("dplyr")
+
 ###########################################################
 
 install_if_missing = function(p) {
@@ -18,4 +20,15 @@ install_if_missing = function(p) {
     cat(paste("Skipping already installed package:", p, "\n"))
   }
 }
+
+remove_if_avail = function(p) {
+  if (p %in% rownames(installed.packages()) == TRUE) {
+    remove.packages(p)
+  }
+  else {
+    cat(paste("Skipping already installed package:", p, "\n"))
+  }
+}
+
 invisible(sapply(my_packages, install_if_missing))
+invisible(sapply(remove_packages, remove_if_avail))
