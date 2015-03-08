@@ -1,2 +1,6 @@
 packrat/lib*/
 .Rproj.user
+packrat
+.Rapp.history
+summary_stats.copy.csv
+summary_stats.csv
