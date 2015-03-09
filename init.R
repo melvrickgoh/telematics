@@ -27,3 +27,6 @@ drivers_directory = p(parent_directory,"/drivers_sub") #see helpers.R for concat
 
 #RUN 1 driver
 analyze.gbm.single_driver(1000)
+
+#RUN FULL PROCESS
+#analyze.run

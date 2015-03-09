@@ -228,7 +228,7 @@ analyze.gbm.run_trip_predictions <- function(train,test,negative_trips){
 	  #x and y instead of using a formula
 	  
 	  
-	  , distribution = "gaussian"
+	  , distribution = "bernoulli"
 	  #use bernoulli for binary outcomes
 	  #other values are "gaussian" for GBM regression 
 	  #or "adaboost"
@@ -310,8 +310,8 @@ analyze.gbm.run_trip_predictions <- function(train,test,negative_trips){
 	#round the predictions to zero or one
 	#in general, don't do this!
 	#it was only because the answers in the comp had to be 0 or 1
-	TestPredictions = round(TestPredictions)
-	TrainPredictions = round(TrainPredictions)
+	TestPredictions = TestPredictions
+	TrainPredictions = TrainPredictions
 	#could also mess around with different cutoff values
 	#would need CV to determine the best
 
@@ -325,8 +325,10 @@ analyze.gbm.run_trip_predictions <- function(train,test,negative_trips){
 	1 - sum(abs(belongs_to_driver_group - TrainPredictions)) / length(TrainPredictions) 
 
 	#write the submission
-	submission = data.frame(Trip = 1:nrow(test), belongs_to_driver_group = TestPredictions)
-	write.csv(submission, file = "gbm submission.csv", row.names = FALSE)
+	# paste(data$F, data$E, data$D, data$C, sep="_")
+	# 1:nrow(test)
+	submission = data.frame(driver_trip = paste(test$driver_no, test$trip_no, sep="_"), prob = TestPredictions)
+	write.table(submission, file = "submission.csv", row.names = FALSE, col.names = FALSE, quote=FALSE, append=TRUE, sep=",")
 
 }
 
@@ -335,6 +337,6 @@ analyze.run <- function(){
 	drivers_v = analyze.dplyr.extract_unique_drivers(stats)
 
 	for (driver_no in drivers_v){
-		print(driver_no)
+		analyze.gbm.single_driver(driver_no)
 	}
 }
